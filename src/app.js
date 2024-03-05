@@ -4,7 +4,7 @@ const express = require('express');
 const Users= require("./models/users");
 const cors=require("cors");
 const cookieParser =require("cookie-parser");
-
+const bcrypt=require('bcrypt')
 const app = express();
 
 
@@ -163,13 +163,15 @@ app.post('/log', async(req, res)=>{
       // console.log("stk"+stk.Email,stk.Password);
       // console.log("[0]"+UserOobj[0])
 console.log(Email, Password)
-if(Pass_word===Password){
+const HashPass=await bcrypt.compare(Pass_word,UserO.Password)
+console.log(HashPass);
+if(HashPass){
   console.log('match');
 
   const token= await UserO.generateAuthToken();
-   res.cookie("jwt",token,{
-     expires:new Date(Date.now()+500000),
-        httpOnly:true });
+  //  res.cookie("jwt",token,{
+  //    expires:new Date(Date.now()+500000),
+  //       httpOnly:true });
         res.statusMessage='success';
         res.send(userdata);
         // res.send("ok").statusMessage("done");
@@ -242,8 +244,12 @@ app.put('/reset', async(req,res)=>{
   try {
     const {Email,password}=req.body
     console.log(Email,password);
-    const Reset=await Users.updateOne({Email:Email},{$set:{Password:password}})
+    const passhash=await bcrypt.hash(password,10)
+console.log(passhash);
+    const Reset=await Users.updateOne({Email:Email},{$set:{Password:passhash}})
     console.log(Reset.modifiedCount);
+    console.log(Reset);
+
     res.send(Reset)
   } catch (error) {
     console.log(error);
