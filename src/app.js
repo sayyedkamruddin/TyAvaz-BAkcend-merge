@@ -6,7 +6,8 @@ const cors=require("cors");
 const cookieParser =require("cookie-parser");
 const bcrypt=require('bcrypt')
 const app = express();
-
+const auth=require('./auth')
+const jwt =require("jsonwebtoken");
 
 
 
@@ -129,8 +130,8 @@ app.post('/form', async(req, res) => {
               Email:Email,
               Phone:Phone
           });
-          const token= await User.generateAuthToken();
-          console.log(token);
+          // const token= await User.generateAuthToken();
+          // console.log(token);
 // if we want to direct access (mean withouth login use ) below code
 // res.cookie("jwt",token,{
 //      expires:new Date(Date.now()+500000),
@@ -147,17 +148,104 @@ app.post('/form', async(req, res) => {
          res.send("hello") ;
     }
     });
+
+
+
+app.post('/tokenAuth',auth,(req,res)=>{
+
+  try {
+      const userData=req.user
+      const cookie=req.token
+      const {Fname, Lname, Email, Phone, City,tokens}=userData;
+    const uData={Fname, Lname, Email, Phone, City}
+    // console.log(userData.token);
+    console.log(Object.keys(userData.tokens).length)
+
+    if (Object.keys(userData.tokens).length!=0) {
+      
+    const f=userData.tokens.filter((ele)=>{
+          // console.log(ele.token);
+          return ele.token===cookie
+      })
+      console.log(userData+" ..............app.js");
+      console.log(cookie+" ..............app.js");
+      console.log(f[0].token+"...........match");
+      console.log(f[0].token===cookie);
+
+      if (f[0].token===cookie) {
+        res.statusMessage="Authenticated"
+    res.send(uData)
+      } else {
+        res.statusMessage="Not-Authenticated"
+        res.send()
+
+      }
+    }
+    else{
+      console.log('token== empty in database');
+      res.send("Login again")
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(error)
+  }
+})
+
+
+app.post('/logout',auth,async(req,res)=>{
+  try {
+    const userData=req.user
+      const cookie=req.token
+      console.log(userData,cookie,userData.tokens)
+      const f=userData.tokens.filter((ele)=>{
+        // console.log(ele.token);
+        return ele.token!=cookie
+    })
+    userData.tokens=f
+    await userData.save()
+    res.statusMessage="logout"
+    res.send()
+
+    
+    
+  } catch (error) {
+    console.log(error);
+    
+  }
+})
+
+
+
+app.post('/alllogout',auth,async(req,res)=>{
+  try {
+    const userData=req.user
+      const cookie=req.token
+      console.log(userData,cookie,userData.tokens)
+      
+    userData.tokens=[]
+    await userData.save()
+    res.statusMessage="alllogout"
+    res.send()
+
+    
+    
+  } catch (error) {
+    console.log(error);
+    
+  }
+})
 app.post('/log', async(req, res)=>{
       try{
-        console.log(req.body)
+        // console.log(req.body)
         const {Username,Pass_word,}=req.body;
         console.log("u "+Username+"ps"+Pass_word)
 
-        console.log('comelogin');
+        // console.log('comelogin');
       const UserO= await Users.findOne({Email:Username});
 
       const UserOobj= await Users.find({Email:Username});
-      console.log("obj"+UserOobj)
+      // console.log("obj"+UserOobj)
       const {Fname, Lname, Email, Phone,Password, City}=UserOobj[0];
       const userdata={Fname, Lname, Email, Phone, City};
       // console.log("stk"+stk.Email,stk.Password);
@@ -169,12 +257,21 @@ if(HashPass){
   console.log('match');
 
   const token= await UserO.generateAuthToken();
+  console.log(token);
+  const userdata={Fname, Lname, Email, Phone, City,token};
+
+
+  // const verifyTOKEN=jwt.verify(token,"Shakib")
+  // console.log("verification"+ verifyTOKEN._id);
   //  res.cookie("jwt",token,{
   //    expires:new Date(Date.now()+500000),
   //       httpOnly:true });
+        // res.json({token:token})
         res.statusMessage='success';
+        // res.cookie('jwt',token)
         res.send(userdata);
         // res.send("ok").statusMessage("done");
+        // res.send(token)
 }else
 { 
   console.log('not match');
